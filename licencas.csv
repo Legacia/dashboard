@@ -1,1 +1,2 @@
-Nome,DescriÃ§Ã£o,Custo Mensal,Categoria
+Nome;Descrição;Moeda;Custo Mensal;Categoria
+Atlassian;Jira, Confluence, Etc;USD;800;Ferramenta Interna
