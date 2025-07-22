@@ -46,6 +46,8 @@ if df_colab.empty:
     st.warning("Nenhum colaborador encontrado.")
 else:
     df_editado = df_colab.copy()
+    if "Tipo Contrato" not in df_editado.columns:
+        df_editado["Tipo Contrato"] = "CLT"
     for i in df_editado.index:
         with st.expander(f"👤 {df_editado.at[i, 'Name']}"):
             df_editado.at[i, "Name"] = st.text_input(f"Nome #{i}", df_editado.at[i, "Name"], key=f"nome_{i}")
