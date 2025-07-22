@@ -16,7 +16,8 @@ def carregar_colaboradores():
     df.columns = df.columns.str.strip()
     for col in ["Salary (month)", "Total Cost (month)", "Total Cost CLT (12 months)",
                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Total Cost CLT (6 months)"]:
-        df[col] = df[col].replace("-", 0).astype(str).str.replace("R\$", "").str.replace(".", "").str.replace(",", ".").astype(float)
+        df[col] = df[col].astype(str).str.replace("R\$", "", regex=True).str.replace(".", "", regex=False).str.replace(",", ".", regex=False)
+    df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
     return df
 
 @st.cache_data
