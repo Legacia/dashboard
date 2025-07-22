@@ -82,7 +82,7 @@ with st.expander("🗑️ Remover colaborador"):
 st.sidebar.header("Filtros")
 cargo_filtro = st.sidebar.multiselect("Cargo", df["Position"].unique(), default=df["Position"].unique())
 min_valor, max_valor = st.sidebar.slider("Custo mensal", 0.0, float(df["Total Cost (month)"].max()), (0.0, float(df["Total Cost (month)"].max())))
-periodos = st.sidebar.multiselect("Períodos", ["Jul/2025", "Aug/2025", "Sep/2025", "Oct/2025", "Nov/2025", "Dec/2025"], default=["Jul", "Aug", "Sep", "Oct", "Nov", "Dec"])
+periodos = st.sidebar.multiselect("Períodos", ["Jul/2025", "Aug/2025", "Sep/2025", "Oct/2025", "Nov/2025", "Dec/2025"], default=["Jul/2025", "Aug/2025", "Sep/2025", "Oct/2025", "Nov/2025", "Dec/2025"])
 
 df_filtrado = df[
     (df["Position"].isin(cargo_filtro)) &
