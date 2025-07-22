@@ -24,7 +24,7 @@ def carregar_colaboradores():
 def carregar_licencas():
     if not os.path.exists(LICENCA_FILE):
         return pd.DataFrame(columns=["Nome", "Descrição", "Custo Mensal", "Categoria"])
-    df = pd.read_csv(LICENCA_FILE)
+    df = pd.read_csv(LICENCA_FILE, encoding="utf-8", encoding_errors="ignore")
     df["Custo Mensal"] = df["Custo Mensal"].astype(float)
     return df
 
