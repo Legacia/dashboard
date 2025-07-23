@@ -14,7 +14,7 @@ def carregar_colaboradores():
     except UnicodeDecodeError:
         df = pd.read_csv(CAMINHO_COLAB, encoding="latin1")
     df.columns = df.columns.str.strip()
-    colunas_necessarias = ["Nome", "Total Cost (month)", "Total Cost (year)", "Tipo Contrato", "Position"]
+    colunas_necessarias = ["Nome", "Total Cost (month)", "Total Cost (year)", "Tipo Contrato", "Position", "Período"]
     for col in colunas_necessarias:
         if col not in df.columns:
             st.error(f"A coluna obrigatória '{col}' não está presente na planilha.")
