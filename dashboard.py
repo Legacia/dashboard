@@ -2,68 +2,88 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import unicodedata
 import os
 
-st.set_page_config(page_title="Painel de Custos", layout="wide")
-
-COLAB_FILE = "Employees Forecast P&D(2025).csv"
-LICENCA_FILE = "licencas.csv"
+CAMINHO_COLAB = "Employees Forecast P&D(2025).csv"
+CAMINHO_LICENCAS = "licencas.csv"
 
 @st.cache_data
 def carregar_colaboradores():
     try:
-        df = pd.read_csv(COLAB_FILE, encoding='utf-8')
-    except:
-        df = pd.read_csv(COLAB_FILE, encoding='latin1')
-
-    df.columns = [col.strip() for col in df.columns]
-    df["Name"] = df["Name"].astype(str).str.strip()
-    df["Total Cost (month)"] = df["Total Cost (month)"].astype(str).str.replace("R\$", "", regex=True).str.replace(".", "", regex=False).str.replace(",", ".", regex=False)
-    df["Total Cost (month)"] = pd.to_numeric(df["Total Cost (month)"], errors="coerce").fillna(0.0)
-    df["Total Cost (year)"] = df["Total Cost CLT (12 months)"].astype(str).str.replace("R\$", "", regex=True).str.replace(".", "", regex=False).str.replace(",", ".", regex=False)
-    df["Total Cost (year)"] = pd.to_numeric(df["Total Cost (year)"], errors="coerce").fillna(0.0)
+        df = pd.read_csv(CAMINHO_COLAB, encoding="utf-8")
+    except UnicodeDecodeError:
+        df = pd.read_csv(CAMINHO_COLAB, encoding="latin1")
+    df.columns = df.columns.str.strip()
+    colunas_necessarias = ["Nome", "Total Cost (month)", "Total Cost (year)", "Tipo Contrato", "Position", "Período"]
+    for col in colunas_necessarias:
+        if col not in df.columns:
+            st.error(f"A coluna obrigatória '{col}' não está presente na planilha.")
+            st.stop()
+    df["Nome"] = df["Nome"].astype(str)
+    df["Total Cost (month)"] = df["Total Cost (month)"].astype(str).str.replace("R\$", "").str.replace(".", "").str.replace(",", ".").astype(float)
+    df["Total Cost (year)"] = df["Total Cost (year)"].astype(str).str.replace("R\$", "").str.replace(".", "").str.replace(",", ".").astype(float)
+    df["Tipo Contrato"] = df["Tipo Contrato"].fillna("CLT")
     return df
 
 @st.cache_data
 def carregar_licencas():
-    if not os.path.exists(LICENCA_FILE):
+    if not os.path.exists(CAMINHO_LICENCAS):
         return pd.DataFrame(columns=["Nome", "Descrição", "Categoria", "Custo Mensal"])
     try:
-        df = pd.read_csv(LICENCA_FILE, encoding='utf-8')
-    except:
-        df = pd.read_csv(LICENCA_FILE, encoding='latin1')
-    df.columns = [col.strip() for col in df.columns]
-    if "Custo Mensal" in df.columns:
-        df["Custo Mensal"] = df["Custo Mensal"].astype(str).str.replace("R\$", "", regex=True).str.replace(".", "", regex=False).str.replace(",", ".", regex=False)
-        df["Custo Mensal"] = pd.to_numeric(df["Custo Mensal"], errors="coerce").fillna(0.0)
+        df = pd.read_csv(CAMINHO_LICENCAS, encoding="utf-8")
+    except UnicodeDecodeError:
+        df = pd.read_csv(CAMINHO_LICENCAS, encoding="latin1")
+    df.columns = df.columns.str.strip()
+    if "Custo Mensal" not in df.columns:
+        st.error("A coluna 'Custo Mensal' é obrigatória no arquivo de licenças.")
+        st.stop()
+    df["Custo Mensal"] = df["Custo Mensal"].astype(str).str.replace("R\$", "").str.replace(".", "").str.replace(",", ".").astype(float)
     return df
 
 df_colab = carregar_colaboradores()
 df_lic = carregar_licencas()
 
-total_pessoas = df_colab["Total Cost (month)"].sum()
+st.title("💼 Painel de Custos da Equipe e Licenças")
+
+# Filtros
+st.sidebar.header("Filtros")
+periodos = sorted(df_colab["Período"].dropna().unique())
+periodo_selecionado = st.sidebar.selectbox("Selecione o período", options=["Todos"] + list(periodos))
+cargos = sorted(df_colab["Position"].dropna().unique())
+cargo_selecionado = st.sidebar.selectbox("Selecione o cargo", options=["Todos"] + list(cargos))
+valor_min, valor_max = st.sidebar.slider("Faixa de custo mensal (R$)", 0, int(df_colab["Total Cost (month)"].max()), (0, int(df_colab["Total Cost (month)"].max())))
+
+df_filtrado = df_colab.copy()
+if periodo_selecionado != "Todos":
+    df_filtrado = df_filtrado[df_filtrado["Período"] == periodo_selecionado]
+if cargo_selecionado != "Todos":
+    df_filtrado = df_filtrado[df_filtrado["Position"] == cargo_selecionado]
+df_filtrado = df_filtrado[(df_filtrado["Total Cost (month)"] >= valor_min) & (df_filtrado["Total Cost (month)"] <= valor_max)]
+
+# Totalizadores
+total_pessoas = df_filtrado["Total Cost (month)"].sum()
 total_licencas = df_lic["Custo Mensal"].sum()
 total_geral = total_pessoas + total_licencas
 
-st.title("💼 Painel de Custos - Equipe e Licenças")
+st.subheader(f"👥 Custo mensal com pessoas: R$ {total_pessoas:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+st.subheader(f"🔧 Custo mensal com licenças: R$ {total_licencas:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+st.subheader(f"📊 Custo mensal total: R$ {total_geral:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
 
-col1, col2, col3 = st.columns(3)
-col1.subheader(f"👥 Custo com pessoas: R$ {total_pessoas:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-col2.subheader(f"🔧 Custo com licenças: R$ {total_licencas:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-col3.subheader(f"📊 Custo total: R$ {total_geral:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+# Gráfico
+fig = px.bar(df_filtrado.sort_values("Nome"), x="Nome", y="Total Cost (month)", title="Custo mensal por colaborador")
+fig.update_layout(xaxis_title="Colaborador", yaxis_title="Custo (R$)", xaxis_tickangle=-45)
+st.plotly_chart(fig, use_container_width=True)
 
-st.markdown("---")
-st.header("👥 Detalhamento dos Colaboradores")
-df_colab_sorted = df_colab.sort_values("Name")
-st.dataframe(df_colab_sorted[["Name", "Position", "Total Cost (month)", "Total Cost (year)"]])
+# Tabela e exportação
+st.markdown("### 📋 Tabela de Colaboradores")
+df_export = df_filtrado.sort_values("Nome")
+df_export["Total Cost (month)"] = df_export["Total Cost (month)"].map(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+df_export["Total Cost (year)"] = df_export["Total Cost (year)"].map(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+st.dataframe(df_export, use_container_width=True)
+st.download_button("📥 Exportar colaboradores filtrados", data=df_export.to_csv(index=False), file_name="colaboradores_filtrados.csv", mime="text/csv")
 
-fig_colab = px.bar(df_colab_sorted, x="Total Cost (month)", y="Name", orientation='h', title="Custo por Colaborador", labels={"Total Cost (month)": "Custo Mensal", "Name": "Colaborador"})
-st.plotly_chart(fig_colab, use_container_width=True)
-
-st.markdown("---")
-st.header("🔧 Licenças e Ferramentas")
-st.dataframe(df_lic)
-
-fig_lic = px.bar(df_lic, x="Custo Mensal", y="Nome", orientation='h', title="Custo com Licenças", labels={"Custo Mensal": "Custo Mensal", "Nome": "Licença"})
-st.plotly_chart(fig_lic, use_container_width=True)
+st.markdown("### 🛠️ Tabela de Licenças")
+df_lic_export = df_lic.copy()
+df_lic_export["Custo Mensal"] = df_lic_export["Custo Mensal"].map(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+st.dataframe(df_lic_export, use_container_width=True)
+st.download_button("📥 Exportar licenças", data=df_lic_export.to_csv(index=False), file_name="licencas.csv", mime="text/csv")
